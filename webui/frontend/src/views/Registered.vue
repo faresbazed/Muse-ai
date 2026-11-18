@@ -398,7 +398,19 @@ onActivated(() => load())
         @selection-change="(v) => (selected = v)"
       >
         <el-table-column type="selection" width="42" />
-        <el-table-column prop="email" label="邮箱" min-width="195" show-overflow-tooltip />
+        <el-table-column prop="email" label="邮箱" min-width="195" show-overflow-tooltip>
+          <template #default="{ row }"><span dir="ltr">{{ row.email }}</span></template>
+        </el-table-column>
+        <el-table-column prop="token_count" label="令牌数" width="90" align="center">
+          <template #header>
+            <el-tooltip content="统计 access/session/refresh/id/CSRF 五类令牌字段中已保存的数量，不显示令牌值。">
+              <span>令牌数</span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <el-tag size="small" type="info" effect="plain">{{ row.token_count }} / 5</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="注册状态" width="110">
           <template #default="{ row }">
             <StatusDot

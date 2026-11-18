@@ -7,7 +7,7 @@ import { testProxies } from '@/api/proxy'
 import { copyText } from '@/api/request'
 
 const proxyStore = useProxyStore()
-const { list, count } = storeToRefs(proxyStore)
+const { list, count, syncState } = storeToRefs(proxyStore)
 
 const draft = ref('')
 const testResults = ref({})
@@ -19,6 +19,13 @@ const rows = computed(() =>
   })),
 )
 const invalidCount = computed(() => rows.value.filter((r) => !r.valid).length)
+const syncText = computed(() => ({
+  loading: '正在载入服务器设置…',
+  saving: '正在保存…',
+  saved: '已保存到服务器',
+  'local-only': '仅保存在此浏览器',
+}[syncState.value] || '已保存到服务器'))
+const syncType = computed(() => syncState.value === 'local-only' ? 'warning' : syncState.value === 'saving' ? 'info' : 'success')
 
 async function runTest(targets) {
   if (!targets.length) return
@@ -72,7 +79,13 @@ function editInDraft() {
     <el-row :gutter="16">
       <el-col :md="10" style="margin-bottom: 16px">
         <el-card shadow="never">
-          <template #header><span class="section-title" style="margin: 0">批量导入 sticky 代理池</span></template>
+          <template #header>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+              <span class="section-title" style="margin: 0">批量导入 sticky 代理池</span>
+              <el-tag size="small" :type="syncType" effect="plain">{{ syncText }}</el-tag>
+            </div>
+          </template>
+          <p class="hint" style="margin: 0 0 10px">代理池会自动保存到服务器数据库，并在使用同一面板的浏览器间共享。</p>
           <p class="hint" style="line-height: 1.65">
             <b>建议优先配置日本 (JP) 节点</b>（免绑卡直接通过引导，不进 waitlist）。<br />
             支持以下任意格式（每行一条）：<br />

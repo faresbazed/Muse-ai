@@ -143,6 +143,10 @@ class ProxyTestReq(BaseModel):
     test_url: str = "https://api.ipify.org?format=json"
 
 
+class ProxyPoolReq(BaseModel):
+    proxies: list[str]
+
+
 class BulkDeleteRegisteredReq(BaseModel):
     emails: Optional[list[str]] = None
     all: bool = False
@@ -308,6 +312,17 @@ def api_reset_invites(req: InviteResetReq):
 
 
 # ════════════════════════ 代理连通性测试 ════════════════════════
+
+
+@app.get("/api/settings/proxy")
+def api_get_proxy_pool():
+    return {"ok": True, **db.get_proxy_pool()}
+
+
+@app.post("/api/settings/proxy")
+def api_save_proxy_pool(req: ProxyPoolReq):
+    proxies = db.save_proxy_pool(req.proxies)
+    return {"ok": True, "proxies": proxies, "configured": True, "count": len(proxies)}
 
 
 @app.post("/api/proxy/test")

@@ -828,6 +828,11 @@ def list_registered(limit: int = 20, offset: int = 0, filter_rt: str = "all") ->
     cur = con.execute(
         f"SELECT email, account_id, status, stage, own_code, used_invite_code, ip, "
         f"device_id, length(access_token) AS at_len, length(session_token) AS st_len, "
+        f"(CASE WHEN length(trim(coalesce(access_token, ''))) > 0 THEN 1 ELSE 0 END + "
+        f"CASE WHEN length(trim(coalesce(session_token, ''))) > 0 THEN 1 ELSE 0 END + "
+        f"CASE WHEN length(trim(coalesce(refresh_token, ''))) > 0 THEN 1 ELSE 0 END + "
+        f"CASE WHEN length(trim(coalesce(id_token, ''))) > 0 THEN 1 ELSE 0 END + "
+        f"CASE WHEN length(trim(coalesce(csrf_token, ''))) > 0 THEN 1 ELSE 0 END) AS token_count, "
         f"extra_json, created_at FROM registered "
         f"{where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
         (limit, offset),
@@ -1032,6 +1037,38 @@ def set_setting(key: str, value) -> None:
             (key, str(value)),
         )
         con.commit()
+
+
+def get_proxy_pool() -> dict:
+    raw = get_setting("proxy_pool", None)
+    if raw is None:
+        return {"proxies": [], "configured": False}
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        parsed = []
+    if not isinstance(parsed, list):
+        parsed = []
+    proxies = list(dict.fromkeys(
+        line.strip()
+        for value in parsed
+        if isinstance(value, str)
+        for line in value.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ))
+    return {"proxies": proxies, "configured": True}
+
+
+def save_proxy_pool(proxies: list[str]) -> list[str]:
+    cleaned = list(dict.fromkeys(
+        line.strip()
+        for value in (proxies or [])
+        if isinstance(value, str)
+        for line in value.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ))
+    set_setting("proxy_pool", json.dumps(cleaned, ensure_ascii=False))
+    return cleaned
 
 
 def get_mail_config() -> dict:

@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useThemeStore } from '@/stores/theme'
 import { useStatsStore } from '@/stores/stats'
 import { useRuntimeStore } from '@/stores/runtime'
+import { useLocaleStore } from '@/stores/locale'
+import { translateUiText } from '@/ui-translations'
 import captainLogo from '@/assets/captain-logo.png'
 
 const route = useRoute()
@@ -12,8 +14,14 @@ const router = useRouter()
 const theme = useThemeStore()
 const statsStore = useStatsStore()
 const runtime = useRuntimeStore()
+const localeStore = useLocaleStore()
 const { stats, invites, registered } = storeToRefs(statsStore)
 const { banner } = storeToRefs(runtime)
+const { locale } = storeToRefs(localeStore)
+
+watch([() => route.meta.title, locale], ([title, language]) => {
+  document.title = `${translateUiText(title || 'Muse JP Reg', language)} · Muse JP Reg`
+}, { immediate: true })
 
 const collapse = ref(false)
 const tipDismissed = ref(false)
@@ -93,6 +101,10 @@ onMounted(() => {
             size="small" class="search-box" @change="onSearch"
           >
             <el-option v-for="o in menuOptions" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+          <el-select v-model="locale" size="small" class="locale-select" aria-label="Language">
+            <el-option label="简体中文" value="zh-CN" />
+            <el-option label="العربية" value="ar" />
           </el-select>
           <div class="pills">
             <el-tag v-for="p in statPills" :key="p.label" :type="p.type" size="small" effect="plain">
@@ -185,6 +197,7 @@ onMounted(() => {
 .topbar .left { display: flex; align-items: center; gap: 12px; }
 .topbar .right { display: flex; align-items: center; gap: 14px; }
 .search-box { width: 180px; }
+.locale-select { width: 124px; }
 .pills { display: flex; gap: 6px; }
 .pills b { color: inherit; }
 .content { background: var(--app-content-bg); padding: 16px; }
@@ -210,5 +223,6 @@ onMounted(() => {
 .tip-close { flex-shrink: 0; }
 @media (max-width: 768px) {
   .pills, .search-box { display: none; }
+  .topbar .right { gap: 8px; }
 }
 </style>

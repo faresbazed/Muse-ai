@@ -41,6 +41,19 @@ html, body, #app {
   font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+html[dir="rtl"], html[dir="rtl"] body { direction: rtl; }
+html[lang="ar"] body { font-family: "Noto Sans Arabic", "Noto Naskh Arabic", Tahoma, Arial, sans-serif; }
+html[dir="rtl"] .sidebar { border-right: 0; border-left: 1px solid var(--app-border); }
+html[dir="rtl"] .mono,
+html[dir="rtl"] code,
+html[dir="rtl"] pre,
+html[dir="rtl"] .log-box,
+html[dir="rtl"] [dir="ltr"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+}
+
 body {
   background: var(--app-content-bg);
   color: var(--el-text-color-primary);

@@ -77,6 +77,16 @@ def test_db_and_fastapi_routes():
             r_health = client.get("/api/health")
             assert r_health.status_code == 200 and r_health.json()["ok"] is True
 
+            # Proxy settings persist in the server-side database and are deduplicated.
+            r_proxy_default = client.get("/api/settings/proxy")
+            assert r_proxy_default.status_code == 200
+            assert r_proxy_default.json()["configured"] is False
+            r_proxy_save = client.post("/api/settings/proxy", json={
+                "proxies": ["jp.example:8000:user:pass", "jp.example:8000:user:pass", "# note"],
+            })
+            assert r_proxy_save.status_code == 200 and r_proxy_save.json()["count"] == 1
+            assert client.get("/api/settings/proxy").json()["proxies"] == ["jp.example:8000:user:pass"]
+
             # 2) 导入邮箱（2段格式）
             r_imp = client.post("/api/import", json={
                 "kind": "icloud_relay",
@@ -105,6 +115,9 @@ def test_db_and_fastapi_routes():
                 "account_id": "frl-998877",
                 "access_token": "frl_tok_xxx",
                 "session_token": "hatch_sess_cookie_value_886chars",
+                "refresh_token": "refresh_fixture_value",
+                "id_token": "id_fixture_value",
+                "csrf_token": "csrf_fixture_value",
                 "status": "redeemed",
                 "stage": "own_code",
                 "own_code": "NEW-MUSE-CODE",
@@ -119,6 +132,11 @@ def test_db_and_fastapi_routes():
             assert r_reg.status_code == 200 and r_reg.json()["total"] == 1
             item = r_reg.json()["items"][0]
             assert item["own_code"] == "NEW-MUSE-CODE" and item["st_len"] > 10
+            assert item["token_count"] == 5
+            assert not {"access_token", "session_token", "refresh_token", "id_token", "csrf_token"}.intersection(item)
+            serialized_item = json.dumps(item)
+            for secret_fixture in ("frl_tok_xxx", "hatch_sess_cookie_value_886chars", "refresh_fixture_value", "id_fixture_value", "csrf_fixture_value"):
+                assert secret_fixture not in serialized_item
 
             r_exp = client.post("/api/registered/export", json={"format": "own_codes", "all": True})
             assert r_exp.status_code == 200 and r_exp.json()["text"] == "NEW-MUSE-CODE"
