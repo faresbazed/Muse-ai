@@ -1,79 +1,254 @@
-# Muse JP Reg (muse.ai 批量自动注册与邀请码裂变系统)
+# Muse AI — لوحة إدارة التسجيل
 
-基于 [`duwqijlk/muse-protocol`](https://github.com/duwqijlk/muse-protocol) 纯 HTTP 协议链路实现，集成独立管理控制台（WebUI）、粘性代理调度、多接码源与邀请码裂变池，专用于 **`muse.ai`** 的批量注册、会话激活、邀请码兑换与自有码自动回收。
+أداة Python وواجهة ويب لإدارة تدفقات التسجيل والحسابات والرموز الترويجية الخاصة بـ **`muse.ai`**. تتضمن لوحة Vue 3 وElement Plus، وجدولة الوكلاء الوسيطة (proxies)، ومصادر متعددة للبريد، وإدارة رموز الدعوة. تدعم الواجهة العربية واتجاه RTL.
 
-> [!IMPORTANT]
-> **节点地区建议**：请优先使用 **日本 (JP) 代理节点**（免绑卡直接通过引导）；非开放地区引导后会进入 `waitlist` 候补状态。
+> **مهم:** التطبيق لا يوفّر تسجيل دخول أو صلاحيات مستخدمين مدمجة. كما أن قاعدة SQLite تحفظ رموز الحسابات وبيانات اعتماد الوكلاء الوسيطة، إلى جانب بيانات أخرى، من دون تشفير. لا تضع اللوحة مباشرة على الإنترنت؛ اتبع إرشادات الوصول الآمن أدناه.
 
----
+## الوظائف الرئيسية
 
-## 一、核心功能
+- تنفيذ تدفق HTTP للمصادقة والتسجيل وتفعيل الجلسة، مع استقبال رموز OTP من موفري البريد المدعومين.
+- إدارة الحسابات المستوردة، ومخزون رموز الدعوة، ونتائج التشغيل، والتصدير.
+- تشغيل تسجيل فردي أو جدولة دفعات، مع تدوير الوكلاء الوسيطة وحدود للتوقف عند حالات الرفض أو الانتظار.
+- اختبار وإدارة مجموعة الوكلاء الوسيطة، وتخزين إعداداتها في SQLite.
+- فحص الحسابات المسجلة واسترداد رموز الدعوة وإدارتها.
+- واجهة عربية مع تخطيط RTL.
 
-1. **纯 HTTP 浏览器对齐协议栈 (`musepy/` + `auth_flow.py`)**
-   - `GET /`：按真实 Chrome 跨站重定向规则跟随 `aymh` 跳转链路，获取 `datr` / `ig_did` 等基础 Cookie，并校验客户端态标识。
-   - `POST /api/auth/native/restart`：生成全程共用的 `X-Hatch-Waterfall-Id` 并获取 `csrf_token`。
-   - `POST /api/auth/native/send-otp` + 幂等 OTP 轮询（`mail_providers/`）：支持本地 `4173` iCloud 中转工作台、`[{"otp","time"}]` 标准化 JSON 源、第三方中转链接、Cloudflare Temp Mail 及 Outlook IMAP/Graph。
-   - `POST /api/auth/native/confirm-otp`：自动提取服务端动态 `tos.content_version`。
-   - `POST /api/auth/native/register-completion`：自动生成成年日本用户档案，成功后**立即早落盘**核心凭证（`frl_account_id`、`frl_access_token`、`hatch_sess`）。
-   - `POST auth.meta.com/hatch/session/bootstrap/`：手动跟随受信 3xx 跳转，离线解析 Next Flight 动态披露（`disclosureText` / `disclosureVersion`）与地区状态门。
-   - `POST /api/hatch/accept-tos` + `vm/wake` + `stateful-sharing`：激活 Hatch 会话并唤醒云端 VM。
-   - `POST /api/hatch/invite-code/redeem` + `POST /api/hatch/invite`：兑换池内邀请码并取回本账号专属 `own_code`，支持**自动入池裂变（1 裂变 30）**。
+> استخدم المشروع وفق شروط الخدمة والقوانين السارية. لا تتجاوز ضوابط الخدمة أو تستخدمه بما يضر بالآخرين.
 
-2. **Sticky 代理调度与停批保护 (`webui/auto_loop.py`)**
-   - Worker 独占认领代理节点，兼容 `host:port:user:pass`、`http://`、`socks5://`（自动转远端 DNS `socks5h://`）。
-   - 支持 `max_per_ip` 成号计数轮换；发码前传输层失败自动黑名单并同邮箱换代理重试（最多 3 次）。
-   - 遇 `region_waitlist`、服务端拒绝或邀请码耗尽自动暂停并推送告警横幅，防止烧号。
+## التثبيت على VPS جديد (Ubuntu)
 
-3. **Vue 3 + Element Plus 管理后台 (`webui/`)**
-   - 仪表盘、邮箱导入与同步、邀请码池管理、单次注册实时日志流、全自动批量调度、已注册账号存货检测与补兑/导出、代理池测试与管理。
-   - 代理池配置自动保存到服务端 SQLite，并在访问同一实例的浏览器间共享；注册结果列表显示每个邮箱已保存的令牌字段数量（只显示数量，不返回令牌值）。
-   - 顶栏可切换阿拉伯语界面，并启用 RTL 布局。
+الخطوات التالية مناسبة لخادم Ubuntu 22.04 أو 24.04، مع حساب SSH يملك صلاحية `sudo`. يوصى بـ Python 3.10 أو أحدث. لا تحتاج إلى نطاق إن كنت ستستخدم نفق SSH؛ تحتاج إلى نطاق موجّه إلى عنوان الخادم إذا أردت إعداد الوصول العام عبر HTTPS.
 
----
+### 1. تحديث الخادم وضبط جدار الحماية
 
-## 二、快速开始
-
-### 1. 安装依赖
+اتصل بالخادم عبر SSH ثم نفّذ:
 
 ```bash
-pip install -r requirements.txt
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip ca-certificates ufw
 ```
 
-如需重新构建前端静态资源：
+اسمح باتصالات SSH قبل تفعيل الجدار الناري:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw enable
+sudo ufw status
+```
+
+إذا كان SSH يستخدم منفذاً غير الافتراضي، اسمح بذلك المنفذ قبل تفعيل UFW. راجع أيضاً قواعد جدار الحماية لدى مزود الـVPS. لا تفتح المنفذ `8766` للعامة.
+
+### 2. إنشاء مستخدم خدمة وتنزيل المشروع
+
+شغّل التطبيق كمستخدم نظام مستقل بدلاً من تشغيله بصلاحيات `root`:
+
+```bash
+sudo adduser --system --group --home /opt/muse-ai --no-create-home muse
+sudo install -d -o muse -g muse -m 750 /opt/muse-ai
+sudo -u muse git clone https://github.com/faresbazed/Muse-ai.git /opt/muse-ai
+```
+
+### 3. إنشاء بيئة Python وتثبيت الاعتماديات
+
+```bash
+sudo -u muse python3 -m venv /opt/muse-ai/.venv
+sudo -u muse /opt/muse-ai/.venv/bin/python -m pip install --upgrade pip
+sudo -u muse /opt/muse-ai/.venv/bin/python -m pip install -r /opt/muse-ai/requirements.txt
+```
+
+تُقدَّم ملفات الواجهة المبنية داخل المستودع؛ لا يلزم تثبيت Node.js لتشغيل التطبيق.
+
+### 4. إعداد خدمة systemd للتشغيل التلقائي
+
+أنشئ ملف الخدمة:
+
+```bash
+sudo tee /etc/systemd/system/muse-ai.service >/dev/null <<'UNIT'
+[Unit]
+Description=Muse AI Web UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=muse
+Group=muse
+WorkingDirectory=/opt/muse-ai
+Environment=PYTHONUNBUFFERED=1
+UMask=0077
+ExecStart=/opt/muse-ai/.venv/bin/python /opt/muse-ai/start_webui.py --host 127.0.0.1 --port 8766 --no-browser
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+```
+
+فعّل الخدمة وشغّلها:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now muse-ai
+sudo systemctl status muse-ai --no-pager
+```
+
+تحقق من سجل الخدمة وصحتها:
+
+```bash
+sudo journalctl -u muse-ai -n 100 --no-pager
+curl http://127.0.0.1:8766/api/health
+```
+
+عند أول تشغيل تُنشأ قاعدة البيانات تلقائياً في `webui/webui.db`.
+
+### 5. الوصول الآمن الموصى به: نفق SSH
+
+الخادم يستمع افتراضياً على `127.0.0.1:8766`، لذلك لا يمكن الوصول إليه مباشرة من الإنترنت. من جهازك، افتح نفقاً:
+
+```bash
+ssh -L 8766:127.0.0.1:8766 <مستخدم-SSH>@<عنوان-IP-الخادم>
+```
+
+اترك جلسة SSH مفتوحة، ثم افتح `http://127.0.0.1:8766` في متصفح جهازك. لا حاجة إلى فتح منفذ لوحة التحكم في UFW أو في جدار مزود الـVPS.
+
+### الوصول عبر نطاق عام (اختياري)
+
+لا تستخدم هذا الخيار إلا عند الحاجة إلى الوصول من خارج SSH. يتطلب نطاقاً يشير إلى عنوان الخادم، ويفرض HTTPS ومصادقة Basic Auth في Nginx. تظل الخدمة نفسها محصورة على `127.0.0.1`؛ لا تغيّرها إلى `0.0.0.0`.
+
+ثبّت Nginx وCertbot وأداة إنشاء ملف كلمات المرور، ثم اسمح بحركة الويب في الجدار الناري:
+
+```bash
+sudo apt install -y nginx apache2-utils certbot python3-certbot-nginx
+sudo ufw allow 'Nginx Full'
+```
+
+أنشئ مستخدم مصادقة. سيطلب `htpasswd` كلمة المرور تفاعلياً:
+
+```bash
+sudo htpasswd -c /etc/nginx/.htpasswd-muse <اسم-مستخدم-للوحة>
+sudo chown root:www-data /etc/nginx/.htpasswd-muse
+sudo chmod 640 /etc/nginx/.htpasswd-muse
+```
+
+أنشئ إعداد HTTP مؤقتاً يستقبل طلب التحقق من الشهادة ثم يوجّه إلى HTTPS. استبدل `panel.example.com` باسم نطاقك:
+
+```bash
+sudo tee /etc/nginx/sites-available/muse-ai >/dev/null <<'NGINX'
+server {
+    listen 80;
+    server_name panel.example.com;
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+NGINX
+sudo ln -s /etc/nginx/sites-available/muse-ai /etc/nginx/sites-enabled/muse-ai
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx --redirect -d panel.example.com
+```
+
+بعد نجاح Certbot، افتح `/etc/nginx/sites-available/muse-ai` وأضف كتلة `location /` التالية **داخل كتلة HTTPS التي أنشأها Certbot (التي تستمع على 443)**. اترك كتلة HTTP لإعادة التوجيه إلى HTTPS كما هي، ولا تضف بيانات المصادقة إليها:
+
+```nginx
+location / {
+    auth_basic "Muse AI";
+    auth_basic_user_file /etc/nginx/.htpasswd-muse;
+
+    proxy_pass http://127.0.0.1:8766;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+}
+```
+
+تحقق من الإعداد وأعد تحميل Nginx:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+افتح `https://panel.example.com`. تأكد من أن `8766` غير مسموح به في جدار الخادم أو مزود الـVPS. تحمي مصادقة Nginx اللوحة وواجهات API عبر الوكيل العكسي، لكنها ليست تسجيل دخول مدمجاً في التطبيق؛ لا تشغّل الخدمة مكشوفة مباشرة على الإنترنت.
+
+## البيانات والنسخ الاحتياطي
+
+توجد قاعدة البيانات في `webui/webui.db`. قد تحتوي على رموز وصول وجلسات، كلمات مرور أو رموز تحديث للبريد، إعدادات، رموز دعوة، وبيانات اعتماد الوكلاء الوسيطة. لا يشفّر التطبيق ملف SQLite أو نسخه الاحتياطية. يحدّ `UMask=0077` في خدمة systemd من صلاحيات الملفات الجديدة؛ حافظ على ملكية مجلد المشروع لمستخدم `muse`، ولا تشارك قاعدة البيانات أو تضعها في Git أو في تخزين نسخ احتياطية عام.
+
+لإنشاء نسخة متسقة، أوقف الخدمة مؤقتاً ثم انسخ قاعدة البيانات إلى مجلد خاص:
+
+```bash
+sudo systemctl stop muse-ai
+sudo install -d -m 700 /var/backups/muse-ai
+sudo cp /opt/muse-ai/webui/webui.db "/var/backups/muse-ai/webui-$(date +%F-%H%M%S).db"
+sudo chown root:root /var/backups/muse-ai/*.db
+sudo chmod 600 /var/backups/muse-ai/*.db
+sudo systemctl start muse-ai
+```
+
+احمِ النسخ الاحتياطية مثل قاعدة البيانات الأصلية، وشفّرها إذا نُقلت إلى خارج الخادم. للاستعادة، أوقف الخدمة، انسخ النسخة المطلوبة إلى `/opt/muse-ai/webui/webui.db`، ثم أعد الملكية إلى `muse:muse` والصلاحيات إلى `600` وشغّل الخدمة من جديد.
+
+## تحديث التطبيق ومتابعة الخدمة
+
+بعد تنزيل التغييرات من المستودع:
+
+```bash
+sudo systemctl stop muse-ai
+sudo -u muse git -C /opt/muse-ai pull --ff-only
+sudo -u muse /opt/muse-ai/.venv/bin/python -m pip install -r /opt/muse-ai/requirements.txt
+sudo systemctl start muse-ai
+```
+
+لعرض السجل مباشرة أو إعادة تشغيل الخدمة:
+
+```bash
+sudo journalctl -u muse-ai -f
+sudo systemctl restart muse-ai
+```
+
+## تشغيل محلي سريع
+
+على جهاز تطوير يدعم Python 3.10 أو أحدث:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python start_webui.py --host 127.0.0.1 --port 8766 --no-browser
+```
+
+افتح `http://127.0.0.1:8766`. في Windows يمكن استخدام `启动服务.bat` و`停止服务.bat`.
+
+لإعادة بناء الواجهة بعد تعديل ملفاتها، يلزم Node.js 18 أو أحدث:
 
 ```bash
 cd webui/frontend
-npm install
+npm ci
 npm run build
 ```
 
-### 2. 启动控制台
+## تكامل iCloud الاختياري
+
+يتوقع `import_icloud.py` افتراضياً قاعدة بيانات خدمة iCloud في `../icloud/data/workbench.db`، ويمكن تغيير مسار قاعدة البيانات عبر `ICLOUD_DB_PATH`. يعمل هذا التكامل فقط إذا كانت قاعدة البيانات وخدمة ترحيل البريد متاحة من خادم التطبيق؛ عناوين الترحيل التي ينشئها السكربت تستخدم `127.0.0.1:4173`، لذا يجب أن تعمل خدمة الترحيل على الخادم نفسه وعلى ذلك المنفذ. تغيير `ICLOUD_DB_PATH` وحده لا يغيّر عنوان خدمة الترحيل. إن لم يكن التكامل المحلي متاحاً، استخدم استيراد البريد من لوحة التحكم.
+
+مثال لمزامنة عشرة عناوين من الخادم:
 
 ```bash
-python start_webui.py --port 8766
+sudo -u muse env ICLOUD_DB_PATH=/المسار/إلى/workbench.db \
+  /opt/muse-ai/.venv/bin/python /opt/muse-ai/import_icloud.py --limit 10
 ```
 
-启动后访问：`http://127.0.0.1:8766`
-
-（Windows 环境也可直接使用根目录下的 `启动服务.bat` / `停止服务.bat`。）
-
-### VPS 部署注意
-
-服务端配置与业务数据保存在 `webui/webui.db`，其中包含账号令牌和代理认证信息；SQLite 文件默认不做静态加密，部署时请确保持久化并严格限制文件与备份权限。面板本身没有登录认证；默认只监听 `127.0.0.1`。远程访问请使用带认证的 HTTPS 反向代理或私有 VPN/网络，不要直接向公网开放，也不要直接使用 `--host 0.0.0.0` 暴露服务。
-
-### 3. 本地 iCloud 邮箱同步（可选）
-
-如果同级目录运行了本地 iCloud 隐藏邮箱服务（默认 `../icloud/data/workbench.db`，可通过环境变量 `ICLOUD_DB_PATH` 覆盖）：
-
-```bash
-python import_icloud.py --limit 10
-```
-
-脚本仅领取尚未分配取件密钥的新邮箱（`token_hash IS NULL`），不会覆盖其他系统已使用的密钥。
-
----
-
-## 三、离线冒烟测试
+## اختبارات الدخان
 
 ```bash
 python test_onboarding_smoke.py
@@ -81,8 +256,6 @@ python test_runner_smoke.py
 python test_webui_smoke.py
 ```
 
----
+## إخلاء المسؤولية
 
-## 四、免责声明
-
-本项目仅供个人学习与协议研究使用，请严格遵守目标站点的服务条款及相关法律法规。
+هذا المشروع لأغراض التعلم والبحث الشخصي. أنت مسؤول عن الالتزام بشروط خدمات الأطراف الأخرى والقوانين واللوائح ذات الصلة.
