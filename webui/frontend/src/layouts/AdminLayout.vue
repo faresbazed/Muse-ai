@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useThemeStore } from '@/stores/theme'
@@ -24,6 +24,12 @@ watch([() => route.meta.title, locale], ([title, language]) => {
 }, { immediate: true })
 
 const collapse = ref(false)
+const mobileViewport = typeof window !== 'undefined'
+  ? window.matchMedia('(max-width: 768px)')
+  : null
+function syncSidebarToViewport(event) {
+  collapse.value = event.matches
+}
 const tipDismissed = ref(false)
 
 const GROUP_ORDER = ['概览', '注册', '数据', '配置']
@@ -60,8 +66,16 @@ const statPills = computed(() => [
 
 onMounted(() => {
   theme.apply()
+  if (mobileViewport) {
+    collapse.value = mobileViewport.matches
+    mobileViewport.addEventListener('change', syncSidebarToViewport)
+  }
   statsStore.startPolling()
   runtime.connectAutoStream()
+})
+
+onUnmounted(() => {
+  mobileViewport?.removeEventListener('change', syncSidebarToViewport)
 })
 </script>
 <template>
@@ -146,7 +160,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.admin { height: 100vh; }
+.admin { min-height: 100vh; min-height: 100dvh; }
 .sidebar {
   background: var(--app-sidebar-bg);
   border-right: 1px solid var(--app-border);
