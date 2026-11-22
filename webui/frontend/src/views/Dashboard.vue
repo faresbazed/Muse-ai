@@ -1,4 +1,5 @@
 <script setup>
+import { useCompactLayout } from '@/composables/useCompactLayout'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
@@ -6,6 +7,7 @@ import { useStatsStore } from '@/stores/stats'
 import { useRuntimeStore } from '@/stores/runtime'
 import StatusDot from '@/components/StatusDot.vue'
 
+const compact = useCompactLayout()
 const router = useRouter()
 const { stats, invites, registered } = storeToRefs(useStatsStore())
 const { autoStatus } = storeToRefs(useRuntimeStore())
@@ -47,7 +49,7 @@ const autoStateType = computed(() => ({
       <el-col :md="12" style="margin-bottom: 16px">
         <el-card shadow="never">
           <template #header><span class="section-title" style="margin: 0">全自动批量调度状态</span></template>
-          <el-descriptions :column="3" border size="small">
+          <el-descriptions :column="compact ? 1 : 3" border size="small">
             <el-descriptions-item label="状态"><StatusDot :type="autoStateType" :text="autoStateLabel" /></el-descriptions-item>
             <el-descriptions-item label="并发 Worker">{{ autoStatus.concurrency || 1 }}</el-descriptions-item>
             <el-descriptions-item label="换 IP 次数">{{ autoStatus.ip_switches || 0 }}</el-descriptions-item>

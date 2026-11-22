@@ -188,6 +188,7 @@ load()
             </div>
           </template>
 
+          <p class="table-scroll-hint">横向滑动查看全部列</p>
           <el-table
             v-loading="loading" :data="rows" size="small" stripe
             @selection-change="(v) => (selected = v)"

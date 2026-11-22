@@ -171,14 +171,14 @@ async function copyEmailSess(email) {
                 </el-form-item>
               </el-space>
 
-              <el-row :gutter="8" style="margin-bottom: 10px">
-                <el-col :span="7">
+              <el-row :gutter="8" style="margin-bottom: 10px; row-gap: 8px">
+                <el-col :xs="24" :sm="7">
                   <el-input v-model="form.lastName" size="small" placeholder="姓 (留空随机)" />
                 </el-col>
-                <el-col :span="7">
+                <el-col :xs="24" :sm="7">
                   <el-input v-model="form.firstName" size="small" placeholder="名 (留空随机)" />
                 </el-col>
-                <el-col :span="10">
+                <el-col :xs="24" :sm="10">
                   <el-input v-model="form.dateOfBirth" size="small" placeholder="生日 1993-11-14 (留空随机)" />
                 </el-col>
               </el-row>

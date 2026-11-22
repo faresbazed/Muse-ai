@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useThemeStore } from '@/stores/theme'
@@ -27,9 +27,28 @@ const collapse = ref(false)
 const mobileViewport = typeof window !== 'undefined'
   ? window.matchMedia('(max-width: 768px)')
   : null
+const isMobile = ref(mobileViewport?.matches || false)
 function syncSidebarToViewport(event) {
+  isMobile.value = event.matches
   collapse.value = event.matches
 }
+watch(() => route.path, () => {
+  if (isMobile.value) collapse.value = true
+})
+function closeMobileMenu(event) {
+  if (event.key === 'Escape' && isMobile.value && !collapse.value) {
+    collapse.value = true
+    document.querySelector('.menu-toggle')?.focus()
+  }
+}
+watch([isMobile, collapse], async ([mobile, collapsed], previous, onCleanup) => {
+  if (!mobile || collapsed) return
+  const previousOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  onCleanup(() => { document.body.style.overflow = previousOverflow })
+  await nextTick()
+  document.querySelector('.sidebar [role="menuitem"]')?.focus()
+})
 const tipDismissed = ref(false)
 
 const GROUP_ORDER = ['概览', '注册', '数据', '配置']
@@ -49,7 +68,7 @@ const crumb = computed(() => [route.meta.group, route.meta.title].filter(Boolean
 const menuOptions = computed(() =>
   router.getRoutes()
     .filter((r) => r.meta?.title)
-    .map((r) => ({ value: r.path, label: `${r.meta.group} / ${r.meta.title}` })),
+    .map((r) => ({ value: r.path, label: `${translateUiText(r.meta.group, locale.value)} / ${translateUiText(r.meta.title, locale.value)}` })),
 )
 const search = ref('')
 function onSearch(path) {
@@ -70,25 +89,32 @@ onMounted(() => {
     collapse.value = mobileViewport.matches
     mobileViewport.addEventListener('change', syncSidebarToViewport)
   }
+  window.addEventListener('keydown', closeMobileMenu)
   statsStore.startPolling()
   runtime.connectAutoStream()
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', closeMobileMenu)
   mobileViewport?.removeEventListener('change', syncSidebarToViewport)
 })
 </script>
 <template>
   <el-container class="admin">
-    <el-aside :width="collapse ? '64px' : '220px'" class="sidebar">
-      <div class="brand" :class="{ mini: collapse }">
+    <button v-if="isMobile && !collapse" class="nav-backdrop" aria-label="关闭菜单" @click="collapse = true" />
+    <el-aside
+      id="main-navigation" :width="isMobile ? '260px' : (collapse ? '64px' : '220px')"
+      class="sidebar" role="navigation" aria-label="主导航" :class="{ 'mobile-open': isMobile && !collapse }"
+      :inert="isMobile && collapse" :aria-hidden="isMobile && collapse ? 'true' : undefined"
+    >
+      <div class="brand" :class="{ mini: collapse && !isMobile }">
         <span class="logo">
           <img :src="captainLogo" alt="logo" class="logo-img" />
         </span>
-        <span v-if="!collapse" class="brand-name">Muse JP Reg</span>
+        <span v-if="!collapse || isMobile" class="brand-name">Muse JP Reg</span>
       </div>
       <el-scrollbar>
-        <el-menu :default-active="activeMenu" router :collapse="collapse" class="side-menu">
+        <el-menu :default-active="activeMenu" router :collapse="collapse && !isMobile" class="side-menu">
           <el-menu-item-group v-for="grp in groups" :key="grp.name" :title="collapse ? '' : grp.name">
             <el-menu-item v-for="r in grp.items" :key="r.path" :index="r.path">
               <el-icon><component :is="r.meta.icon" /></el-icon>
@@ -102,7 +128,7 @@ onUnmounted(() => {
     <el-container>
       <el-header class="topbar">
         <div class="left">
-          <el-button text @click="collapse = !collapse">
+          <el-button text class="menu-toggle" aria-label="切换菜单" aria-controls="main-navigation" :aria-expanded="!collapse" @click="collapse = !collapse">
             <el-icon :size="18"><Fold v-if="!collapse" /><Expand v-else /></el-icon>
           </el-button>
           <el-breadcrumb separator="/">
@@ -126,7 +152,7 @@ onUnmounted(() => {
             </el-tag>
           </div>
           <el-tooltip :content="theme.dark ? '浅色模式' : '深色模式'">
-            <el-button circle text @click="theme.toggle">
+            <el-button circle text :aria-label="translateUiText(theme.dark ? '浅色模式' : '深色模式', locale)" @click="theme.toggle">
               <el-icon :size="18"><Moon v-if="!theme.dark" /><Sunny v-else /></el-icon>
             </el-button>
           </el-tooltip>
@@ -161,6 +187,9 @@ onUnmounted(() => {
 
 <style scoped>
 .admin { min-height: 100vh; min-height: 100dvh; }
+.admin > .el-container { min-width: 0; }
+.menu-toggle { flex-shrink: 0; }
+.nav-backdrop { position: fixed; inset: 0; background: #0007; border: 0; z-index: 1000; }
 .sidebar {
   background: var(--app-sidebar-bg);
   border-right: 1px solid var(--app-border);
@@ -200,6 +229,8 @@ onUnmounted(() => {
 }
 .brand.mini { justify-content: center; padding: 0; }
 .side-menu { border-right: none; }
+.side-menu :deep(.el-menu-item) { white-space: normal; line-height: 1.6; height: auto; min-height: 48px; padding: 12px 16px !important; }
+.side-menu :deep(.el-menu-item span) { min-width: 0; overflow-wrap: anywhere; }
 .topbar {
   display: flex;
   align-items: center;
@@ -235,8 +266,25 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 .tip-close { flex-shrink: 0; }
-@media (max-width: 768px) {
+@media (max-width: 1199px) {
   .pills, .search-box { display: none; }
-  .topbar .right { gap: 8px; }
+}
+@media (max-width: 768px) {
+  .sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 1001; visibility: hidden; transform: translateX(-100%); transition: transform .2s, visibility .2s; }
+  :global(html[dir="rtl"] .sidebar) { transform: translateX(100%); }
+  .sidebar.mobile-open { visibility: visible; transform: translateX(0); }
+  :global(html[dir="rtl"] .sidebar.mobile-open) { transform: translateX(0); }
+  .topbar { position: sticky; top: 0; z-index: 100; height: auto; min-height: 60px; gap: 8px; padding: 6px 10px; }
+  .topbar .left { min-width: 0; gap: 6px; }
+  .topbar .right { flex-shrink: 0; gap: 4px; }
+  .topbar :deep(.el-breadcrumb) { min-width: 0; font-size: 12px; line-height: 1.5; }
+  .topbar :deep(.el-breadcrumb__item:not(:last-child)) { display: none; }
+  .topbar :deep(.el-breadcrumb__inner) { overflow-wrap: anywhere; }
+  .locale-select { width: 108px; }
+  .content { padding: 10px; }
+  .brand { min-height: 60px; }
+  .tip-banner { padding: 10px; }
+  .tip-content { min-width: 0; line-height: 1.7; }
+  .side-menu :deep(.el-menu-item) { white-space: normal; line-height: 1.6; min-height: 48px; height: auto; padding-block: 12px; }
 }
 </style>

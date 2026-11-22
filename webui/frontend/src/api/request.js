@@ -85,5 +85,6 @@ export async function copyText(text) {
 /** 时间戳(秒) -> 本地时间字符串 */
 export function fmtTime(ts) {
   if (!ts) return '-'
-  return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false })
+  const locale = typeof document === 'undefined' ? 'en-GB' : document.documentElement.lang
+  return new Date(ts * 1000).toLocaleString(locale || 'en-GB', { hour12: false })
 }

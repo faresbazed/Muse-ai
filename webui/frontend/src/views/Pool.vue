@@ -181,7 +181,9 @@ loadProviders()
         <el-button @click="bulkDeleteByStatus">执行</el-button>
       </el-space>
 
+      <p class="table-scroll-hint">横向滑动查看全部列</p>
       <el-skeleton v-if="loading && !rows.length" :rows="6" animated style="padding: 8px 0" />
+
       <el-table
         v-else
         v-loading="loading" :data="rows" size="small" stripe

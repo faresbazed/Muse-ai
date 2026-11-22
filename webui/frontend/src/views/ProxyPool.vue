@@ -120,6 +120,7 @@ function editInDraft() {
             </div>
           </template>
 
+          <p class="table-scroll-hint">横向滑动查看全部列</p>
           <el-table :data="rows" size="small" stripe max-height="440">
             <el-table-column prop="index" label="#" width="48" />
             <el-table-column prop="proxy" label="代理地址" min-width="200" show-overflow-tooltip>

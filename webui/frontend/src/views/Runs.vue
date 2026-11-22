@@ -33,7 +33,9 @@ onActivated(() => load())
           <el-button size="small" @click="load"><el-icon><Refresh /></el-icon>刷新</el-button>
         </div>
       </template>
+      <p class="table-scroll-hint">横向滑动查看全部列</p>
       <el-skeleton v-if="loading && !rows.length" :rows="6" animated style="padding: 8px 0" />
+
       <el-table v-else v-loading="loading" :data="rows" size="small" stripe>
         <el-table-column prop="run_id" label="Run ID" width="145">
           <template #default="{ row }"><span class="mono">{{ row.run_id }}</span></template>

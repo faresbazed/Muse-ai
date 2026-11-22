@@ -81,3 +81,6 @@ config.local.json
 secrets.json
 proxies*.txt
 codes*.txt
+
+# Offline browser-test screenshots and reports
+webui/frontend/test-results/

@@ -1,4 +1,6 @@
 <script setup>
+import { useLocaleStore } from '@/stores/locale'
+import { translateUiText } from '@/ui-translations'
 import { computed, onActivated, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { importAccounts, syncLocalIcloud } from '@/api/accounts'
@@ -6,6 +8,7 @@ import { getMailProviders } from '@/api/settings'
 import { useStatsStore } from '@/stores/stats'
 import { useRuntimeStore } from '@/stores/runtime'
 
+const localeStore = useLocaleStore()
 const statsStore = useStatsStore()
 const runtime = useRuntimeStore()
 
@@ -140,7 +143,7 @@ async function doImport() {
 
       <p class="hint" v-if="current">
         每行一个，{{ current.line_segments }} 段（用 <code>----</code> 分隔）：
-        <code>{{ current.import_hint || '' }}</code>
+        <code>{{ translateUiText(current.import_hint || '', localeStore.locale) }}</code>
       </p>
 
       <el-input

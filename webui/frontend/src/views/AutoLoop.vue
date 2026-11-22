@@ -1,4 +1,5 @@
 <script setup>
+import { useCompactLayout } from '@/composables/useCompactLayout'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -11,6 +12,7 @@ import { useRuntimeStore } from '@/stores/runtime'
 import LogPanel from '@/components/LogPanel.vue'
 import StatusDot from '@/components/StatusDot.vue'
 
+const compact = useCompactLayout()
 const router = useRouter()
 const { form } = storeToRefs(useFormStore())
 const proxyStore = useProxyStore()
@@ -135,7 +137,7 @@ async function call(fn, name) {
         <el-button type="danger" :disabled="!canStop" @click="call(autoStop, '停止')">停止</el-button>
       </el-space>
 
-      <el-descriptions :column="6" border size="small" style="margin-top: 16px">
+      <el-descriptions :column="compact ? 1 : 6" border size="small" style="margin-top: 16px">
         <el-descriptions-item label="状态"><StatusDot :type="stateType" :text="stateLabel" /></el-descriptions-item>
         <el-descriptions-item label="成功">
           <b style="color: var(--el-color-success)">{{ autoStatus.registered_ok || 0 }}</b>

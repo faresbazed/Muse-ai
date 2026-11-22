@@ -28,3 +28,12 @@
 .ft-left { color: var(--el-text-color-secondary); font-size: 12px; }
 .ft-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 </style>
+
+<style scoped>
+@media (max-width: 768px) {
+  .footer-toolbar { flex-wrap: wrap; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); margin-inline: 0; }
+  .ft-left { width: 100%; overflow-wrap: anywhere; }
+  .ft-right { width: 100%; flex-wrap: wrap; margin: 0; }
+  .ft-right :deep(.el-button) { flex: 1 1 auto; }
+}
+</style>

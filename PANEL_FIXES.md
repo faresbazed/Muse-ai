@@ -18,7 +18,7 @@ Base: `2de3af1` from `faresbazed/Muse-ai`.
 - Full pytest run: **18 passed** (15 new cases plus 3 existing tests).
 - Existing standalone offline smoke scripts: **6/6 onboarding**, **9/9 runner**, **3/3 WebUI**.
 - Repeated the full Python checks with socket connections disabled. No external registration, OTP, redemption, proxy test, or mail request was needed.
-- Frontend production build passed; the generated assets were byte-for-byte unchanged. There are no frontend or visual changes in this patch.
+- At backend-only commit `80708b9`, the frontend production build passed with byte-for-byte unchanged assets. The later mobile/Arabic work is documented in `MOBILE_ARABIC_FIXES.md` and includes rebuilt assets plus rendered browser checks.
 - `git diff --check` passed.
 
 Run locally in a virtual environment:

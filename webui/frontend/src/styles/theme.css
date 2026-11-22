@@ -122,3 +122,54 @@ body {
 /* 路由进度条配色（品牌蓝） */
 #nprogress .bar { background: var(--brand); height: 2px; }
 #nprogress .peg { box-shadow: 0 0 10px var(--brand), 0 0 5px var(--brand); }
+
+/* Contain wide tables and Latin identifiers without widening the page. */
+.el-container, .el-main, .el-col, .el-card, .el-card__body { min-width: 0; }
+.el-main { flex: 1; }
+.el-card__header, .el-card__body, .hint { overflow-wrap: anywhere; }
+.el-table { max-width: 100%; }
+.el-table .cell { overflow-wrap: normal; }
+html[dir="rtl"] .el-table { direction: ltr; }
+html[dir="rtl"] .el-table .cell { direction: rtl; text-align: right; }
+html[dir="rtl"] .el-breadcrumb__item { float: right; }
+html[dir="rtl"] .el-menu-item .el-icon { margin-right: 0; margin-left: 5px; }
+html[dir="rtl"] .el-form-item__label { text-align: right; }
+
+@media (max-width: 768px) {
+  .page { padding: 0; }
+  .page .el-card__header, .page .el-card__body { padding: 14px; }
+  .page .el-card__header > div { flex-wrap: wrap; gap: 10px; }
+  .page .el-space { max-width: 100%; }
+  .page .el-space__item { max-width: 100%; }
+  .page .el-button:not(.is-text) { min-height: 40px; height: auto; white-space: normal; line-height: 1.5; padding-block: 9px; max-width: 100%; }
+  .page .el-button + .el-button { margin-inline-start: 0; }
+  .page .el-button > span { white-space: normal; overflow-wrap: anywhere; }
+  .page .el-select, .page .el-input-number { max-width: 100%; }
+  .page .el-form-item__label { height: auto; line-height: 1.6; margin-bottom: 8px; }
+  .page .el-checkbox, .page .el-radio { white-space: normal; height: auto; min-height: 40px; margin-inline-end: 12px; }
+  .page .el-checkbox__label, .page .el-radio__label { white-space: normal; line-height: 1.6; }
+  .page .el-pagination { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .page .el-descriptions__table { table-layout: fixed; }
+  .page .el-descriptions__cell { overflow-wrap: anywhere; }
+  .stat-card .el-card__body { padding: 12px; }
+  .stat-card .stat-label { line-height: 1.6; }
+  .stat-card .el-icon { display: none; }
+  .el-dialog { max-width: calc(100vw - 24px); margin-inline: auto; }
+  .el-dialog__body { overflow-wrap: anywhere; }
+  .el-message-box { max-width: calc(100vw - 24px); }
+  .el-message { max-width: calc(100vw - 24px); }
+  .menu-toggle, .topbar .el-button { min-width: 40px; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none !important; }
+}
+
+.table-scroll-hint { display: none; }
+@media (max-width: 768px) {
+  .table-scroll-hint { display: block; margin: 10px 0; color: var(--el-text-color-secondary); font-size: 12px; }
+  .el-table .el-scrollbar__bar.is-horizontal { opacity: 1; }
+  .el-dialog__header > div { flex-wrap: wrap; }
+  .el-dialog .mono { min-width: 0; overflow-wrap: anywhere; }
+  .el-dialog__footer { display: flex; flex-wrap: wrap; gap: 8px; }
+  .el-dialog__footer .el-button { margin: 0; height: auto; min-height: 40px; white-space: normal; }
+}
