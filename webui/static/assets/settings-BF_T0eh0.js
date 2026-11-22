@@ -1,1 +1,0 @@
-import{H as s}from"./index-BGGMV0oX.js";const i=(t=!1)=>s.get("/api/mail/providers",{params:{pooled_only:t}}),o=()=>s.get("/api/settings/mail"),e=t=>s.post("/api/settings/mail",t),p=()=>s.post("/api/settings/mail/test");export{o as a,i as g,e as s,p as t};
