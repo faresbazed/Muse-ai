@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -217,8 +217,18 @@ def api_import_icloud_local(req: SyncLocalIcloudReq):
 
 
 @app.get("/api/accounts")
-def api_accounts(status: str = "", limit: int = 50, offset: int = 0, kind: str = ""):
-    items = db.list_accounts(status=status, limit=limit, offset=offset, kind=kind)
+def api_accounts(
+    status: str = "",
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    kind: str = "",
+):
+    # List screens need metadata only, never mailbox credentials or private OTP URLs.
+    metadata = {"email", "kind", "status", "imported_at", "claimed_at", "finished_at", "fail_reason"}
+    items = [
+        {key: value for key, value in row.items() if key in metadata}
+        for row in db.list_accounts(status=status, limit=limit, offset=offset, kind=kind)
+    ]
     total = db.count_accounts(status=status, kind=kind)
     return {
         "ok": True,
@@ -268,7 +278,7 @@ def api_bulk_reset(req: BulkResetReq):
 
 
 @app.post("/api/accounts/release_stale")
-def api_release_stale(stale_seconds: int = 1800):
+def api_release_stale(stale_seconds: int = Query(1800, ge=60)):
     n = db.release_stale_in_use(stale_seconds=stale_seconds)
     return {"ok": True, "released": n, "stats": db.stats()}
 
@@ -277,7 +287,11 @@ def api_release_stale(stale_seconds: int = 1800):
 
 
 @app.get("/api/invites")
-def api_list_invites(status: str = "", limit: int = 50, offset: int = 0):
+def api_list_invites(
+    status: str = "",
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
     return {
         "ok": True,
         "items": db.list_invite_codes(status=status, limit=limit, offset=offset),
@@ -455,7 +469,7 @@ def _safe_get(q):
 
 
 @app.get("/api/runs")
-def api_runs(limit: int = 50):
+def api_runs(limit: int = Query(50, ge=1, le=1000)):
     return {"ok": True, "items": db.list_runs(limit=limit)}
 
 
@@ -463,7 +477,11 @@ def api_runs(limit: int = 50):
 
 
 @app.get("/api/registered")
-def api_registered(limit: int = 20, offset: int = 0, filter: str = "all"):
+def api_registered(
+    limit: int = Query(20, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    filter: str = "all",
+):
     items = db.list_registered(limit=limit, offset=offset, filter_rt=filter)
     total = db.count_registered(filter_rt=filter)
     return {

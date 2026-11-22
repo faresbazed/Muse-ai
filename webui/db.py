@@ -181,7 +181,7 @@ def import_accounts(text: str, kind: str = "") -> dict:
             relay = r.get("relay_url", "") or ""
 
             cur = con.execute(
-                "SELECT refresh_token, relay_url, kind FROM outlook_accounts WHERE email=?",
+                "SELECT password, client_id, refresh_token, relay_url, kind FROM outlook_accounts WHERE email=?",
                 (r["email"],),
             )
             existing = cur.fetchone()
@@ -194,13 +194,20 @@ def import_accounts(text: str, kind: str = "") -> dict:
                 )
                 inserted += 1
             elif (
-                (existing["refresh_token"] or "") != refresh
+                (existing["password"] or "") != password
+                or (existing["client_id"] or "") != client_id
+                or (existing["refresh_token"] or "") != refresh
                 or (existing["relay_url"] or "") != relay
                 or (existing["kind"] or "") != row_kind
             ):
                 con.execute(
                     "UPDATE outlook_accounts SET refresh_token=?, password=?, client_id=?, "
-                    "relay_url=?, kind=?, status='available', imported_at=?, fail_reason=NULL "
+                    "relay_url=?, kind=?, "
+                    "claimed_at=CASE WHEN status IN ('in_use', 'done') THEN claimed_at ELSE NULL END, "
+                    "finished_at=CASE WHEN status IN ('in_use', 'done') THEN finished_at ELSE NULL END, "
+                    "fail_reason=CASE WHEN status IN ('in_use', 'done') THEN fail_reason ELSE NULL END, "
+                    "status=CASE WHEN status IN ('in_use', 'done') THEN status ELSE 'available' END, "
+                    "imported_at=? "
                     "WHERE email=?",
                     (refresh, password, client_id, relay, row_kind, now, r["email"]),
                 )
@@ -625,7 +632,7 @@ def reset_invite_codes(codes: Optional[list[str]] = None) -> int:
     now = time.time()
     with _lock:
         con = _conn()
-        if codes:
+        if codes is not None:
             cleaned = [c.strip() for c in codes if c and c.strip()]
             if not cleaned:
                 return 0
@@ -782,15 +789,15 @@ def _registered_where(filt: str) -> str:
         return "WHERE status IN ('activated', 'registered_pending_redemption')"
     if filt == "waitlist":
         return "WHERE status = 'registered_waitlist'"
+    # Match the structured live-check field, not unrelated text elsewhere in JSON.
+    # CASE also tolerates legacy malformed extra_json without breaking the list API.
+    live_status = "json_extract(CASE WHEN json_valid(extra_json) THEN extra_json ELSE '{}' END, '$.live_check.status')"
     if filt == "unchecked":
-        return "WHERE (extra_json IS NULL OR extra_json NOT LIKE '%\"live_check\"%')"
+        return f"WHERE {live_status} IS NULL"
     if filt == "live":
-        return "WHERE extra_json LIKE '%\"status\": \"live\"%' OR extra_json LIKE '%\"status\":\"live\"%'"
+        return f"WHERE {live_status} = 'live'"
     if filt == "token_invalid":
-        return (
-            "WHERE extra_json LIKE '%\"token_invalid\"%' "
-            "OR extra_json LIKE '%\"forbidden\"%'"
-        )
+        return f"WHERE {live_status} IN ('token_invalid', 'forbidden')"
     return ""
 
 
