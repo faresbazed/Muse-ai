@@ -40,7 +40,9 @@ onActivated(() => load())
         <el-table-column prop="run_id" label="Run ID" width="145">
           <template #default="{ row }"><span class="mono">{{ row.run_id }}</span></template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }"><span dir="ltr">{{ row.email }}</span></template>
+        </el-table-column>
         <el-table-column label="状态" width="95">
           <template #default="{ row }">
             <StatusDot :type="STATUS_TYPE[row.status] || 'info'" :text="row.status" />

@@ -190,7 +190,9 @@ loadProviders()
         @selection-change="(v) => (selected = v)"
       >
         <el-table-column type="selection" width="44" />
-        <el-table-column prop="email" label="邮箱" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="email" label="邮箱" min-width="220" show-overflow-tooltip>
+          <template #default="{ row }"><span dir="ltr">{{ row.email }}</span></template>
+        </el-table-column>
         <el-table-column v-if="kindOptions.length > 1" label="来源" width="130">
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ kindLabel(row.kind) }}</el-tag>

@@ -136,7 +136,7 @@ async function doImport() {
             />
           </el-select>
           <span class="hint" style="margin-left: 12px">
-            支持 <code>email----OTP源URL</code>（兼容 <code>muse-protocol</code> 的 <code>otp-urls.txt</code> 与第三方 iCloud 中转链接）
+            支持 <code>{{ translateUiText('email----OTP源URL', localeStore.locale) }}</code>（兼容 <code>muse-protocol</code> 的 <code>otp-urls.txt</code> 与第三方 iCloud 中转链接）
           </span>
         </el-form-item>
       </el-form>
